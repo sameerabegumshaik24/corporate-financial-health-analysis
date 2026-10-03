@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Company Fundamentals Dashboard</title>
+<style>
+  :root {
+    --ink: #1b1a23; --muted: #5b5a68; --paper: #f4f2f6; --panel: #ffffff; --line: #d9d5e0;
+    --accent: #4a2c6b; --accent-ink: #ffffff; --accent-soft: #ece6f3;
+    --good: #1b6b3a; --good-bg: #e2f1e8; --bad: #a4261d; --bad-bg: #fbe6e3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1020px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font: 700 30px/1.2 Georgia, "Times New Roman", serif; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font: 700 20px/1.3 Georgia, "Times New Roman", serif; margin: 0 0 12px; }
+  h3 { font-size: 13px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin: 18px 0 6px; }
+  .lede { color: var(--muted); max-width: 68ch; margin: 0 0 24px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td.num, th.num { text-align: right; }
+  tr.group td { background: var(--accent-soft); font-weight: 700; color: var(--accent); font-size: 14px; }
+  td.dash { color: var(--muted); text-align: center; }
+  input, select { font: inherit; color: var(--ink); padding: 7px 8px; border: 1px solid #b0abbd; border-radius: 4px; background: #fff; width: 100%; }
+  input[type=number] { text-align: right; min-width: 130px; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 3px solid #c3aee0; outline-offset: 1px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px; margin-bottom: 16px; }
+  .grid label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-top: 16px; }
+  button { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 4px; cursor: pointer; border: 1px solid var(--accent); background: #fff; color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-ink); }
+  button:disabled { opacity: .6; cursor: progress; }
+  #status { margin: 12px 0 0; min-height: 1.5em; color: var(--muted); }
+  #status.error { color: var(--bad); }
+  .note { color: var(--muted); font-size: 14px; margin: 10px 0 0; }
+  .small { color: var(--muted); font-size: 13px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 13px; font-weight: 600; }
+  .tag.ok { background: var(--good-bg); color: var(--good); }
+  .tag.bad { background: var(--bad-bg); color: var(--bad); }
+  .warn { background: var(--bad-bg); color: var(--bad); border-radius: 4px; padding: 10px 12px; margin-bottom: 12px; font-weight: 600; }
+  .ctx { margin: 8px 0 0; padding-left: 20px; }
+  ul.checks { list-style: none; margin: 0; padding: 0; }
+  ul.checks li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .commentary { white-space: pre-wrap; max-width: 74ch; }
+  .na { color: var(--muted); font-size: 13px; }
+  @media (max-width: 700px) { h1 { font-size: 24px; } .grid { grid-template-columns: 1fr; } button.primary { width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Company fundamentals dashboard</h1>
+  <p class="lede">Enter a company's figures and market data. The app calculates profitability, financial position, returns and valuation in code, so every number is exact, and checks the data. Claude then explains the results using a written Skill (SKILL.md). It describes the numbers and never gives buy, sell or hold advice.</p>
+
+  <section class="panel" aria-labelledby="in-h">
+    <h2 id="in-h">Your figures</h2>
+    <div class="grid">
+      <div><label for="company">Company name (optional)</label><input id="company" type="text" maxlength="80"></div>
+      <div><label for="unit">Unit of the financial figures</label>
+        <select id="unit"><option>Rs</option><option>Rs thousands</option><option>Rs lakhs</option><option selected>Rs crore</option><option>Rs millions</option></select></div>
+      <div><label for="shareUnit">Unit of the number of shares</label>
+        <select id="shareUnit"><option>Shares</option><option>Thousand shares</option><option>Lakh shares</option><option selected>Crore shares</option><option>Million shares</option></select></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th class="num">Previous year</th><th class="num">Current year</th></tr></thead>
+        <tbody id="form-rows"></tbody>
+      </table>
+    </div>
+    <h3>Market data</h3>
+    <div class="grid" id="market"></div>
+    <div class="controls">
+      <button type="button" id="run" class="primary">Analyse company</button>
+      <button type="button" id="clear">Clear all figures</button>
+    </div>
+    <p id="status" role="status"></p>
+    <p class="note">Previous-year income statement figures are used for growth and margin comparison. Peer multiples and the bond yield are optional and add valuation context. At least four measures must be calculable. The values shown are sample figures for a fictional company.</p>
+  </section>
+
+  <section id="results" hidden>
+    <div id="sections"></div>
+    <div class="panel"><h2>Data checks</h2><div id="checks"></div></div>
+    <div class="panel"><h2>Commentary</h2><div id="commentary" class="commentary"></div></div>
+  </section>
+</main>
+
+<script>
+  const ROWS = [
+    ["Income statement", [["revenue","Revenue","both"],["ebit","Operating profit (EBIT)","both"],["da","Depreciation and amortisation","both"],["pat","Profit after tax (PAT)","both"]]],
+    ["Balance sheet", [["totalAssets","Total assets","cur"],["equity","Shareholders' equity","cur"],["borrowings","Borrowings","cur"],["currentAssets","Current assets","cur"],["currentLiabilities","Current liabilities","cur"]]]
+  ];
+  const MARKET = [["shares","Number of shares (in the unit chosen above)"],["price","Current share price (Rs)"],["peerPE","Peer median P/E (optional)"],["peerPB","Peer median P/B (optional)"],["bondYield","Benchmark bond yield, % (optional)"]];
+  // Sample figures for a fictional company, in Rs crore
+  const SAMPLE = {
+    revenue:[1000,1200], ebit:[150,190], da:[40,50], pat:[100,130],
+    totalAssets:[null,1500], equity:[null,800], borrowings:[null,250], currentAssets:[null,600], currentLiabilities:[null,350],
+    shares:20, price:130, peerPE:22, peerPB:3, bondYield:7
+  };
+  const formRows = document.getElementById("form-rows");
+  const statusEl = document.getElementById("status");
+  const runBtn = document.getElementById("run");
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+  const cell = (tr, text, cls) => { const td = el("td", cls, text); tr.appendChild(td); return td; };
+  const num = n => Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  const signed = n => (n > 0 ? "+" : n < 0 ? "-" : "") + num(Math.abs(n));
+
+  function input(key, period, label, value) {
+    const i = document.createElement("input");
+    i.type = "number"; i.step = "any"; i.dataset.key = key; i.dataset.period = period; i.setAttribute("aria-label", label + (period === "previous" ? " previous year" : period === "current" ? " current year" : ""));
+    if (value !== null && value !== undefined) i.value = value;
+    return i;
+  }
+  function buildForm(useSample) {
+    formRows.textContent = "";
+    ROWS.forEach(([group, items]) => {
+      const g = el("tr", "group"); const gt = el("td", "", group); gt.colSpan = 3; g.appendChild(gt); formRows.appendChild(g);
+      items.forEach(([key, label, kind]) => {
+        const tr = document.createElement("tr"); cell(tr, label);
+        const tdp = el("td", kind === "both" ? "num" : "dash");
+        if (kind === "both") tdp.appendChild(input(key, "previous", label, useSample ? SAMPLE[key][0] : null)); else tdp.textContent = "-";
+        tr.appendChild(tdp);
+        const tdc = el("td", "num"); tdc.appendChild(input(key, "current", label, useSample ? SAMPLE[key][1] : null)); tr.appendChild(tdc);
+        formRows.appendChild(tr);
+      });
+    });
+    const mk = document.getElementById("market"); mk.textContent = "";
+    MARKET.forEach(([key, label]) => {
+      const d = document.createElement("div"); const l = el("label", "", label); l.htmlFor = "m-" + key;
+      const i = input(key, "market", label, useSample ? SAMPLE[key] : null); i.id = "m-" + key; i.style.textAlign = "right";
+      d.appendChild(l); d.appendChild(i); mk.appendChild(d);
+    });
+  }
+  buildForm(true);
+  document.getElementById("company").value = "Sample Technologies Ltd (fictional)";
+  document.getElementById("clear").addEventListener("click", () => { buildForm(false); document.getElementById("company").value = ""; });
+
+  function metricCell(tr, r, unit) {
+    const td = el("td", "num");
+    if (!r) { td.appendChild(el("span", "na", "-")); }
+    else if (r.value === null) { td.appendChild(el("span", "na", "Not calculated: " + r.reason)); }
+    else td.textContent = num(r.value) + (unit === "%" ? "%" : unit === "x" ? "x" : "");
+    tr.appendChild(td);
+  }
+
+  function render(d) {
+    const host = document.getElementById("sections"); host.textContent = "";
+    ["Profitability", "Financial position", "Returns", "Valuation"].forEach(section => {
+      const panel = el("div", "panel"); panel.appendChild(el("h2", "", section));
+      const figs = d.figures.filter(f => f.section === section);
+      if (figs.length) {
+        const wrap = el("div", "table-wrap"); const t = document.createElement("table");
+        const hd = document.createElement("tr"); [["Item",""],["Previous","num"],["Current","num"],["Change","num"],["Change %","num"]].forEach(([h, c]) => hd.appendChild(el("th", c, h)));
+        const th = document.createElement("thead"); th.appendChild(hd); t.appendChild(th);
+        const tb = document.createElement("tbody");
+        figs.forEach(f => {
+          const tr = document.createElement("tr"); cell(tr, f.label);
+          cell(tr, f.previous === null ? "-" : num(f.previous), "num"); cell(tr, f.current === null ? "-" : num(f.current), "num");
+          cell(tr, f.previous !== null && f.current !== null ? signed(f.current - f.previous) : "-", "num");
+          const p = cell(tr, f.changePct === null ? "-" : signed(f.changePct) + "%", "num"); if (f.note) p.title = f.note;
+          tb.appendChild(tr);
+        });
+        t.appendChild(tb); wrap.appendChild(t); panel.appendChild(wrap);
+        panel.appendChild(el("p", "small", "Amounts in " + d.unit + "."));
+      }
+      const wrap2 = el("div", "table-wrap"); const t2 = document.createElement("table");
+      const hd2 = document.createElement("tr"); [["Measure",""],["Previous year","num"],["Current year","num"]].forEach(([h, c]) => hd2.appendChild(el("th", c, h)));
+      const th2 = document.createElement("thead"); th2.appendChild(hd2); t2.appendChild(th2);
+      const tb2 = document.createElement("tbody");
+      d.metrics.filter(m => m.section === section).forEach(m => {
+        const tr = document.createElement("tr");
+        const first = cell(tr, m.name); first.appendChild(el("div", "small", m.formula));
+        metricCell(tr, m.previous, m.unit); metricCell(tr, m.current, m.unit);
+        tb2.appendChild(tr);
+      });
+      t2.appendChild(tb2); wrap2.appendChild(t2); panel.appendChild(wrap2);
+      if (section === "Valuation") {
+        if (d.valuationContext.length) { const ul = el("ul", "ctx"); d.valuationContext.forEach(x => ul.appendChild(el("li", "", x.text))); panel.appendChild(el("h3", "", "Comparison with peers and bond yield")); panel.appendChild(ul); }
+        else panel.appendChild(el("p", "note", "Enter peer median multiples and a bond yield to add a valuation comparison."));
+        panel.appendChild(el("p", "note", "A multiple is not cheap or expensive by itself. It needs a peer or historical comparison, and industries differ."));
+      }
+      if (section === "Returns") panel.appendChild(el("p", "note", "Returns use closing (year-end) balances, not averages."));
+      host.appendChild(panel);
+    });
+
+    const ck = document.getElementById("checks"); ck.textContent = "";
+    const bad = d.checks.filter(c => c.status === "mismatch");
+    if (bad.length) ck.appendChild(el("div", "warn", bad.length + " check(s) failed. Verify these figures before relying on the analysis."));
+    if (!d.checks.length) ck.appendChild(el("p", "note", "No checks could run because the figures they need were not entered."));
+    else { const ul = el("ul", "checks"); d.checks.forEach(c => { const li = document.createElement("li"); li.appendChild(el("span", "tag " + (c.status === "ok" ? "ok" : "bad"), c.status === "ok" ? "Passed" : "Mismatch")); li.appendChild(document.createTextNode(" " + c.name)); li.appendChild(el("div", "small", c.detail)); ul.appendChild(li); }); ck.appendChild(ul); }
+
+    const cm = document.getElementById("commentary"); cm.textContent = "";
+    if (d.commentarySource === "template") cm.appendChild(el("p", "warn", "Claude commentary is unavailable (" + (d.commentaryError || "unknown reason") + "). This is a standard summary generated by code from the calculated results."));
+    cm.appendChild(document.createTextNode(d.commentary));
+    const res = document.getElementById("results"); res.hidden = false;
+    res.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  runBtn.addEventListener("click", async () => {
+    statusEl.className = ""; statusEl.textContent = "Calculating and writing the commentary...";
+    runBtn.disabled = true;
+    try {
+      const body = { company: document.getElementById("company").value, unit: document.getElementById("unit").value, shareUnit: document.getElementById("shareUnit").value, current: {}, previous: {}, market: {} };
+      document.querySelectorAll("input[data-key]").forEach(i => { body[i.dataset.period][i.dataset.key] = i.value; });
+      const resp = await fetch("/api/fundamentals", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const text = await resp.text();
+      let data;
+      try { data = JSON.parse(text); } catch (e) { throw new Error("The server function was not found. Check that api/fundamentals.js is in your repository and redeploy."); }
+      if (!resp.ok) throw new Error(data.error || "Something went wrong.");
+      statusEl.textContent = "";
+      render(data);
+    } catch (e) { statusEl.className = "error"; statusEl.textContent = e.message; }
+    finally { runBtn.disabled = false; }
+  });
+</script>
+</body>
+</html>
